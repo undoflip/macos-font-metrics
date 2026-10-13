@@ -30,6 +30,7 @@ jobs:
       - run: node measure_fallback.mjs results/fallback-${{ matrix.os }}.json
       - run: node measure_context.mjs results/context-${{ matrix.os }}.json
       - run: node measure_context2.mjs results/context2-${{ matrix.os }}.json
+      - run: ALL_FAMILIES=1 node measure_context2.mjs results/context3-${{ matrix.os }}.json
       - name: commit results
         run: |
           git config user.name "github-actions[bot]"

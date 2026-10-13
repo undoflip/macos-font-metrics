@@ -7,9 +7,13 @@ import { chromium } from 'playwright-core'
 import fs from 'node:fs'
 
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-const FAMILIES = ['Arial', 'Helvetica', 'Times', 'Menlo', 'Avenir', 'Verdana', 'br0k3nd3f4u17', 'system-ui']
-const STRINGS = ['MlL₹▁₺₸ẞॿiIwmW', '₹▁₺₸ẞॿ', '₹ẞ', '▁ẞ', '₹▁ẞ', '▁₺ẞ', '₺₸ẞ', '₹▁₺ẞ', 'ẞ', 'aẞ', '₹▁₺₸ẞ', 'ẞॿ', '₸ẞॿ']
-const GENERIC = /^(serif|sans-serif|monospace|cursive|fantasy|system-ui)$/
+const FAMILIES = process.env.ALL_FAMILIES
+    ? JSON.parse(fs.readFileSync(new URL('./families.json', import.meta.url))).all
+    : ['Arial', 'Helvetica', 'Times', 'Menlo', 'Avenir', 'Verdana', 'br0k3nd3f4u17', 'system-ui']
+const STRINGS = process.env.ALL_FAMILIES
+    ? ['MlL₹▁₺₸ẞॿiIwmW', 'mmmMMMmmmlllmmmLLL₹▁₺₸ẞॿ', 'mmMwWLliI0fiflO&1', 'mmmmmmmmmmlli']
+    : ['MlL₹▁₺₸ẞॿiIwmW', '₹▁₺₸ẞॿ', '₹ẞ', '▁ẞ', '₹▁ẞ', '▁₺ẞ', '₺₸ẞ', '₹▁₺ẞ', 'ẞ', 'aẞ', '₹▁₺₸ẞ', 'ẞॿ', '₸ẞॿ']
+const GENERIC = /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|-apple-system|ui-sans-serif|ui-serif|ui-monospace|ui-rounded)$/
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true })
 const page = await browser.newPage()
