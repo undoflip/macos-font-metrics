@@ -2,7 +2,7 @@ name: site
 on:
   push:
     branches: [main]
-    paths: ['check_site.mjs', '.github/workflows/site.yml']
+    paths: ['.github/workflows/site.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -19,7 +19,15 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - run: npm i --no-save playwright-core@1.48.2
-      - run: mkdir -p results && node check_site.mjs results/site-${{ matrix.os }}.json
+      - name: plain chrome, no automation
+        run: |
+          mkdir -p results
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --user-data-dir=/tmp/c1 --no-first-run --no-default-browser-check --window-size=1440,1000 --window-position=0,0 https://iphey.com/ > /dev/null 2>&1 &
+          sleep 50
+          screencapture -x results/iphey-${{ matrix.os }}-screen.png || true
+          pkill -f "user-data-dir=/tmp/c1" || true
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --user-data-dir=/tmp/c2 --window-size=1440,1400 --virtual-time-budget=40000 --screenshot=results/iphey-${{ matrix.os }}-headless.png https://iphey.com/ || true
+          ls -la results
       - name: commit results
         run: |
           git config user.name "github-actions[bot]"
