@@ -1,4 +1,4 @@
-// Opens a public fingerprint report page in the installed Google Chrome (headed)
+// Opens a public fingerprint report page in the installed Google Chrome
 // and writes the visible score and the detail section's text.
 //
 //   npm i playwright-core@1 && node check_site.mjs out.json
@@ -6,8 +6,12 @@ import { chromium } from 'playwright-core'
 import fs from 'node:fs'
 
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-const browser = await chromium.launch({ executablePath: CHROME, headless: false })
-const page = await browser.newPage()
+const browser = await chromium.launch({ executablePath: CHROME, headless: true, timeout: 60000 })
+const probe = await browser.newPage()
+const ua = (await probe.evaluate(() => navigator.userAgent)).replace('HeadlessChrome', 'Chrome')
+await probe.close()
+const context = await browser.newContext({ userAgent: ua, viewport: { width: 1440, height: 900 } })
+const page = await context.newPage()
 const res = {}
 try {
     await page.goto('https://iphey.com/', { waitUntil: 'domcontentloaded', timeout: 90000 })
