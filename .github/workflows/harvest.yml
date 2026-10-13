@@ -2,7 +2,7 @@ name: harvest
 on:
   push:
     branches: [main]
-    paths: ['harvest_fonts.py', 'measure_chrome.mjs', 'measure_glyphs.mjs', 'measure_pairs.mjs', 'measure_sizes.mjs', 'measure_fallback.mjs', 'measure_context.mjs', 'measure_context2.mjs', 'measure_probes.mjs', 'measure_heights.mjs', 'families.json', '.github/workflows/harvest.yml']
+    paths: ['harvest_fonts.py', 'measure_chrome.mjs', 'measure_glyphs.mjs', 'measure_pairs.mjs', 'measure_sizes.mjs', 'measure_fallback.mjs', 'measure_context.mjs', 'measure_context2.mjs', 'measure_probes.mjs', 'measure_heights.mjs', 'measure_ink.mjs', 'families.json', '.github/workflows/harvest.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -33,6 +33,7 @@ jobs:
       - run: ALL_FAMILIES=1 node measure_context2.mjs results/context3-${{ matrix.os }}.json
       - run: node measure_probes.mjs results/probes-${{ matrix.os }}.json
       - run: node measure_heights.mjs results/heights-${{ matrix.os }}.json
+      - run: node measure_ink.mjs results/ink-${{ matrix.os }}.json
       - name: commit results
         run: |
           git config user.name "github-actions[bot]"
