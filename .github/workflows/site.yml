@@ -16,17 +16,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
-      - run: npm i --no-save playwright-core@1.48.2
       - name: plain chrome, no automation
+        timeout-minutes: 5
         run: |
           mkdir -p results
           "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --user-data-dir=/tmp/c1 --no-first-run --no-default-browser-check --window-size=1440,1000 --window-position=0,0 https://iphey.com/ > /dev/null 2>&1 &
+          P1=$!
           sleep 50
-          screencapture -x results/iphey-${{ matrix.os }}-screen.png || true
-          pkill -f "user-data-dir=/tmp/c1" || true
-          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --user-data-dir=/tmp/c2 --window-size=1440,1400 --virtual-time-budget=40000 --screenshot=results/iphey-${{ matrix.os }}-headless.png https://iphey.com/ || true
+          (screencapture -x results/iphey-${{ matrix.os }}-screen.png &) ; sleep 10
+          kill $P1 2>/dev/null || true
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --user-data-dir=/tmp/c2 --window-size=1440,1400 --virtual-time-budget=40000 --screenshot=results/iphey-${{ matrix.os }}-headless.png https://iphey.com/ > /dev/null 2>&1 &
+          P2=$!
+          sleep 70
+          kill $P2 2>/dev/null || true
           ls -la results
       - name: commit results
         run: |
