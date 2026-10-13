@@ -2,7 +2,7 @@ name: harvest
 on:
   push:
     branches: [main]
-    paths: ['harvest_fonts.py', 'measure_chrome.mjs', 'measure_glyphs.mjs', 'families.json', '.github/workflows/harvest.yml']
+    paths: ['harvest_fonts.py', 'measure_chrome.mjs', 'measure_glyphs.mjs', 'measure_pairs.mjs', 'families.json', '.github/workflows/harvest.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -24,6 +24,7 @@ jobs:
       - run: npm i --no-save playwright-core@1.48.2
       - run: node measure_chrome.mjs results/chrome-widths-${{ matrix.os }}.json
       - run: node measure_glyphs.mjs results/glyph-widths-${{ matrix.os }}.json
+      - run: node measure_pairs.mjs results/pairs-${{ matrix.os }}.json
       - name: commit results
         run: |
           git config user.name "github-actions[bot]"
