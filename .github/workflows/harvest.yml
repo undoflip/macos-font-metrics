@@ -1,0 +1,33 @@
+name: harvest
+on:
+  push:
+    branches: [main]
+    paths: ['harvest_fonts.py', 'measure_chrome.mjs', '.github/workflows/harvest.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  harvest:
+    strategy:
+      max-parallel: 1
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install fonttools==4.54.1
+      - run: mkdir -p results && python3 harvest_fonts.py results/fonts-${{ matrix.os }}.json
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm i --no-save playwright-core@1.48.2
+      - run: node measure_chrome.mjs results/chrome-widths-${{ matrix.os }}.json
+      - name: commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          git add results
+          git commit -m "results ${{ matrix.os }}" || exit 0
+          git push origin HEAD:main
