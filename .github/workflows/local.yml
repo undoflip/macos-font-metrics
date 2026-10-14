@@ -1,0 +1,30 @@
+name: local
+on:
+  push:
+    branches: [main]
+    paths: ['measure_local.mjs', '.github/workflows/local.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  local:
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm i --no-save playwright-core@1.48.2
+      - run: node measure_local.mjs results/local-${{ matrix.os }}.json results/fonts-${{ matrix.os }}.json
+      - name: commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results
+          git commit -m "results local ${{ matrix.os }}" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
