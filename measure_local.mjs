@@ -22,14 +22,15 @@ const CANVAS = 'MlL₹▁₺₸ẞॿiIwmW'
 const DOM = 'mmmMMMmmmlllmmmLLL₹▁₺₸ẞॿ'
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true })
-const page = await browser.newPage()
-await page.setContent('<!doctype html><meta charset=utf-8><body></body>')
-// Names go to the page in chunks with a per-name timeout: a lookup that never
-// settles (the first run hung for 20 min without output) is recorded and skipped.
-const data = {}
-const CHUNK = 40
-for (let start = 0; start < NAMES.length; start += CHUNK) {
-    const part = await page.evaluate(async ({ names, start, CANVAS, DOM }) => {
+const OUT = process.argv[2] || 'macos-local.json'
+// The page measures a chunk of names with a per-name timeout on loading. Some
+// lookups block the renderer synchronously (the first runs hung for good at
+// chunk 201-240: on-demand macOS fonts — Mukta Mahee, Nanum, Noto, Osaka), and
+// no in-page timeout can catch that. So Node also times each chunk out: the
+// page is dropped, and that chunk is retried name by name in fresh pages; the
+// name that hangs is recorded as { loaded: false, hang: true }. Partial
+// results are written after every chunk.
+const measure = async ({ names, start, CANVAS, DOM }) => {
         const c = document.createElement('canvas').getContext('2d')
         const out = {}
         for (let j = 0; j < names.length; j++) {
@@ -61,11 +62,40 @@ for (let start = 0; start < NAMES.length; start += CHUNK) {
             out[name] = { loaded: true, canvas, dom }
         }
         return out
-    }, { names: NAMES.slice(start, start + CHUNK), start, CANVAS, DOM })
-    Object.assign(data, part)
-    const v = Object.values(data)
-    console.log(`${Math.min(start + CHUNK, NAMES.length)}/${NAMES.length} loaded ${v.filter(x => x.loaded).length} timeout ${v.filter(x => x.timeout).length}`)
+    }
+// A fresh context each time: a page in the same context may land in the same
+// (hung) renderer process. Closing a hung one is not awaited past 5 s.
+let ctx = null, page = null
+const fresh = async () => {
+    if (ctx) { const old = ctx; await Promise.race([old.close().catch(() => {}), new Promise(r => setTimeout(r, 5000))]) }
+    ctx = await browser.newContext()
+    page = await ctx.newPage()
+    await page.setContent('<!doctype html><meta charset=utf-8><body></body>')
 }
-await browser.close()
-fs.writeFileSync(process.argv[2] || 'macos-local.json', JSON.stringify({ out: data }))
+const run = (names, start, ms) => Promise.race([
+    page.evaluate(measure, { names, start, CANVAS, DOM }),
+    new Promise(r => setTimeout(() => r(null), ms)),
+])
+await fresh()
+const data = {}
+const CHUNK = 40
+for (let start = 0; start < NAMES.length; start += CHUNK) {
+    const names = NAMES.slice(start, start + CHUNK)
+    let part = await run(names, start, 60000)
+    if (!part) {
+        part = {}
+        for (let j = 0; j < names.length; j++) {
+            await fresh()
+            const one = await run([names[j]], start + j, 15000)
+            if (one) Object.assign(part, one)
+            else { part[names[j]] = { loaded: false, hang: true }; console.log(`hang: ${names[j]}`) }
+        }
+        await fresh()
+    }
+    Object.assign(data, part)
+    fs.writeFileSync(OUT, JSON.stringify({ out: data }))
+    const v = Object.values(data)
+    console.log(`${Math.min(start + CHUNK, NAMES.length)}/${NAMES.length} loaded ${v.filter(x => x.loaded).length} timeout ${v.filter(x => x.timeout).length} hang ${v.filter(x => x.hang).length}`)
+}
+await Promise.race([browser.close().catch(() => {}), new Promise(r => setTimeout(r, 10000))])
 console.log(`names: ${NAMES.length}, loaded: ${Object.values(data).filter(x => x.loaded).length}`)
