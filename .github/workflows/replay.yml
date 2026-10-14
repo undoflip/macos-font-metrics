@@ -1,0 +1,32 @@
+name: replay
+on:
+  push:
+    branches: [main]
+    paths: ['replay_iphey.mjs', 'replay_iphey_page.mjs', 'iphey-ops.json', '.github/workflows/replay.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  replay:
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        os: [macos-15, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm i --no-save playwright-core@1.48.2
+      - timeout-minutes: 30
+        run: node replay_iphey.mjs results/replay-${{ matrix.os }}.json
+      - name: commit results
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results
+          git commit -m "results replay ${{ matrix.os }}" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
